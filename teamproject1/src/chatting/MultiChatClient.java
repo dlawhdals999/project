@@ -36,7 +36,7 @@ public class MultiChatClient extends Frame implements ActionListener, Runnable {
 	JTextField textField;
 	JButton sendBtn = new JButton("전송");
 	JLabel Label = new JLabel("");
-	MemberInfoVO mvo = new MemberInfoVO();
+	static MemberInfoVO mvo = new MemberInfoVO();
 	
 	public MultiChatClient() {
 		setTitle("1:1 채팅 프로그램(클라이언트)");
@@ -47,11 +47,7 @@ public class MultiChatClient extends Frame implements ActionListener, Runnable {
 			public void windowClosing(WindowEvent e) {
 				int result = JOptionPane.showConfirmDialog(Label, "채팅을 종료하겠습니까?", "채팅 종료", JOptionPane.YES_NO_OPTION);
 				if(result == 0) {
-//					클라이언트 채팅창이 닫힐 때 ㅅ버에게 나간다고 알려준다.
-					printWriter.write("저 나가요~~~~~ 바이바이~~~~~\n");
-					printWriter.write("bye\n");
-					printWriter.flush();
-//					채팅에 사용한 모든 객체를 닫는다.
+//					
 					if(socket != null) { try { socket.close(); } catch (IOException e1) { e1.printStackTrace(); } }
 					if(printWriter != null) { try { printWriter.close(); } catch (Exception e1) { e1.printStackTrace(); } }
 					if(scanner != null) { try { scanner.close(); } catch (Exception e1) { e1.printStackTrace(); } }
@@ -62,12 +58,9 @@ public class MultiChatClient extends Frame implements ActionListener, Runnable {
 		
 		mvo = BoardMain.getMvo();
 		
-		
-		
 		MainPanel cattingpanel = new MainPanel(new ImageIcon(".\\src\\images\\chatting.png").getImage());
 		add(cattingpanel, BorderLayout.NORTH);	
 //		전송버튼
-		
 		sendBtn.setBounds(440, 715, 63, 41);
 		sendBtn.setFont(new Font("D2Coding", Font.BOLD, 20));
 		sendBtn.setBackground(new Color(15248986));
@@ -75,12 +68,11 @@ public class MultiChatClient extends Frame implements ActionListener, Runnable {
 		sendBtn.setBorder(null);
 		cattingpanel.add(sendBtn);
 		
-//		글씨 입력
+//		텍스트필드 입력
 		textField = new JTextField();
 		textField.setBounds(3, 715, 438, 41);
 		textField.setBorder(null);
 		textField.setFont(new Font("D2Coding", Font.PLAIN, 20));
-		
 		cattingpanel.add(textField);
 		textField.setColumns(10);
 		
@@ -89,7 +81,6 @@ public class MultiChatClient extends Frame implements ActionListener, Runnable {
 		Label.setBounds(0, 0, 503, 709);
 		Label.setForeground(Color.white);
 		cattingpanel.add(Label);
-		
 		
 		setLocation(550, 100);
 		setSize(cattingpanel.getDim());
@@ -102,34 +93,27 @@ public class MultiChatClient extends Frame implements ActionListener, Runnable {
 		sendBtn.addActionListener(this);
 		
 		setVisible(true);
-	}
-	
-	public static void main(String[] args) {
-		
-		MultiChatClient client = new MultiChatClient();
-		
 		try {
 //			서버에 접속한다.
-			client.socket = new Socket("192.168.7.25", 10009);
-			client.Label.setText("<html>" + client.message + "</html>");
-			
+			socket = new Socket("192.168.7.25", 10009);
+			Label.setText("<html>" + message + "</html>");
 			
 //			서버에 접속했으므로 텍스트 필드와 전송 버튼을 활성화 시키과 메시지를 입력할 수 있게 텍스트 필드로 포커스를 이동시킨다.
-			client.textField.requestFocus();
+			textField.requestFocus();
 			
 //			서버와 메시지를 주고받기 위해서 데이터 전송에 사용할 객체를 생성한다.
-			client.printWriter = new PrintWriter(client.socket.getOutputStream());
-			client.scanner = new Scanner(client.socket.getInputStream());
+			printWriter = new PrintWriter(socket.getOutputStream());
+			scanner = new Scanner(socket.getInputStream());
 			
 //			클라이언트에서 전송되는 메시지를 받는 스레드를 실행한다.
-			Thread thread = new Thread(client);
-			thread.start();
+			
 			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
 	}
+	
+
 
 //	텍스트 필드와 전송 버튼에 ActionListener를 걸어서 서버로 데이터를 전송한다.
 	@Override
@@ -139,9 +123,6 @@ public class MultiChatClient extends Frame implements ActionListener, Runnable {
 		String str = textField.getText().trim();
 //		텍스트 필드에 데이터가 입력된 상태일 경우 메시지를 클라이언트 채팅창에 표시하고 서버로 전송한다.
 		if(str.length() > 0) {
-//			입력한 메시지를 클라이언트 채팅창에 표시한다.
-			message = message +"client >> "   + str + "<br>";
-			Label.setText("<html>" + message + "</html>");
 //			입력한 메시지를 서버로 전송한다.
 			if(printWriter != null) {
 				printWriter.write(str + "\n");
@@ -158,6 +139,15 @@ public class MultiChatClient extends Frame implements ActionListener, Runnable {
 	@Override
 	public void run() {
 		
+		String nickname = mvo.getNickName();
+		if(nickname.length() > 0) {
+			if(printWriter != null) {
+				printWriter.write(nickname + "\n");
+				printWriter.flush();
+			}
+		}
+		
+		
 //		서버와 통신이 유지되고 있는 동안 반복한다. => 통신 소켓이 null이 아닌 동안 반복한다.
 		while(socket != null) {
 //			서버에서 전송된 메시지를 받는다.
@@ -170,7 +160,7 @@ public class MultiChatClient extends Frame implements ActionListener, Runnable {
 		
 //			서버에서 전송된 메시지를 서버 채팅창에 표시한다.
 			if(str.length() > 0) {
-				message = message +"server >> "   + str+ "<br>";
+				message = message  + str+ "<br>";
 				Label.setText("<html>" + message + "</html>");
 //				서버 채팅 창이 닫히거나 "bye"를 전송받으면 채팅을 종료해야 하므로 반복을 탈출한다.
 				if(str.toLowerCase().equals("bye")) {
